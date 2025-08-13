@@ -1,6 +1,7 @@
 /**
  * DbContext.jsx
  * Centralized IndexedDB layer using `idb`.
+ * Now with full annotation support
  */
 
 import React, {
@@ -57,6 +58,9 @@ export const DbProvider = ({ children }) => {
         size: file.size,
         lastModified: file.lastModified,
         blob: file,
+        annotations: [], // Initialize empty annotations array
+        highlights: [], // Initialize empty highlights array
+        lastOpened: new Date().toISOString(),
       };
       await db.put(DB_CONFIG.storeName, record);
       await refreshDocs(db);
@@ -70,6 +74,46 @@ export const DbProvider = ({ children }) => {
     if (!db) return null;
     return db.get(DB_CONFIG.storeName, id);
   }, []);
+
+  const saveDocumentData = useCallback(
+    async (id, data) => {
+      const db = getDb();
+      if (!db) return null;
+
+      try {
+        const document = await db.get(DB_CONFIG.storeName, id);
+        if (!document) return null;
+
+        const updatedDoc = {
+          ...document,
+          ...data,
+          lastOpened: new Date().toISOString(),
+        };
+
+        await db.put(DB_CONFIG.storeName, updatedDoc);
+        await refreshDocs(db);
+        return updatedDoc;
+      } catch (error) {
+        console.error('Error saving document data:', error);
+        return null;
+      }
+    },
+    [refreshDocs]
+  );
+
+  const saveAnnotations = useCallback(
+    async (documentId, annotations) => {
+      return saveDocumentData(documentId, { annotations });
+    },
+    [saveDocumentData]
+  );
+
+  const saveHighlights = useCallback(
+    async (documentId, highlights) => {
+      return saveDocumentData(documentId, { highlights });
+    },
+    [saveDocumentData]
+  );
 
   const deleteDocument = useCallback(
     async (
@@ -121,6 +165,9 @@ export const DbProvider = ({ children }) => {
         getDocumentById,
         refreshDocs,
         getAllDocuments,
+        saveDocumentData,
+        saveAnnotations,
+        saveHighlights,
       }}
     >
       {children}

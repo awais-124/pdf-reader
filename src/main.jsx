@@ -28,10 +28,10 @@ import { DbProvider } from './context/DbContext.jsx';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <AppProvider>
-      <DbProvider>
+    <DbProvider>
+      <AppProvider>
         <App />
-      </DbProvider>
-    </AppProvider>
+      </AppProvider>
+    </DbProvider>
   </React.StrictMode>
 );

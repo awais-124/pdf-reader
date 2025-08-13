@@ -54,12 +54,6 @@ export default function Documents() {
     }
   };
 
-  const handleRemoveCurrentDoc = () => {
-    setCurrentDocumentId(null);
-    setCurrentDocumentName(null);
-    loadPdfFromBlob(null); // clear viewer
-  };
-
   const handleDelete = (e, id) => {
     e.stopPropagation();
     deleteDocument(

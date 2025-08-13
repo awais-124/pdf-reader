@@ -13,10 +13,15 @@ import React, {
   useState,
   useEffect,
   useRef,
+  useContext,
 } from 'react';
+
+import { DbContext } from './DbContext.jsx';
 
 import * as pdfjsLib from 'pdfjs-dist';
 import PdfWorker from 'pdfjs-dist/build/pdf.worker?worker';
+
+import { v4 as uuidv4 } from 'uuid';
 
 pdfjsLib.GlobalWorkerOptions.workerPort = new PdfWorker();
 
@@ -32,6 +37,8 @@ import {
 export const AppContext = createContext();
 
 export const AppProvider = ({ children }) => {
+  const { saveAnnotations, dbReady } = useContext(DbContext);
+
   const timerRef = useRef(null);
 
   // --- PDF State ---
@@ -50,8 +57,10 @@ export const AppProvider = ({ children }) => {
   const [currentHighlightColor, setCurrentHighlightColor] = useState(
     HIGHLIGHT_COLORS.yellow
   );
-  const [brushSize, setBrushSize] = useState(BRUSH_SIZES[0]);
   const [annotations, setAnnotations] = useState([]);
+  const [currentAnnotationText, setCurrentAnnotationText] = useState('');
+
+  const [brushSize, setBrushSize] = useState(BRUSH_SIZES[0]);
 
   // --- TTS (placeholders) ---
   const [ttsActive, setTtsActive] = useState(false);
@@ -121,14 +130,37 @@ export const AppProvider = ({ children }) => {
 
   // --- Annotation Functions (stubs kept) ---
   const addAnnotation = useCallback(
-    (a) => setAnnotations((prev) => [...prev, a]),
-    []
+    (text, position = { x: 50, y: 50 }) => {
+      if (!text.trim()) return;
+
+      const newAnnotation = {
+        id: uuidv4(),
+        text,
+        x: position.x,
+        y: position.y,
+        page: currentPage,
+        createdAt: new Date().toISOString(),
+      };
+
+      setAnnotations((prev) => [...prev, newAnnotation]);
+      return newAnnotation;
+    },
+    [currentPage]
   );
-  const removeAnnotation = useCallback(
-    (id) => setAnnotations((prev) => prev.filter((x) => x.id !== id)),
-    []
-  );
-  const clearAnnotations = useCallback(() => setAnnotations([]), []);
+
+  const removeAnnotation = useCallback((id) => {
+    setAnnotations((prev) => prev.filter((ann) => ann.id !== id));
+  }, []);
+
+  const clearAnnotations = useCallback(() => {
+    setAnnotations((prev) => prev.filter((ann) => ann.page !== currentPage));
+  }, [currentPage]);
+
+  const updateAnnotationPosition = useCallback((id, newPosition) => {
+    setAnnotations((prev) =>
+      prev.map((ann) => (ann.id === id ? { ...ann, ...newPosition } : ann))
+    );
+  }, []);
 
   const startTTS = useCallback(
     (text) => {
@@ -196,6 +228,12 @@ export const AppProvider = ({ children }) => {
     })();
   }, [pdfDoc, currentPage, extractTextFromPage]);
 
+  useEffect(() => {
+    if (currentDocumentId && dbReady) {
+      saveAnnotations(currentDocumentId, annotations);
+    }
+  }, [annotations, currentDocumentId, dbReady, saveAnnotations]);
+
   return (
     <AppContext.Provider
       value={{
@@ -229,9 +267,12 @@ export const AppProvider = ({ children }) => {
 
         // Annotations
         annotations,
+        currentAnnotationText,
+        setCurrentAnnotationText,
         addAnnotation,
         removeAnnotation,
         clearAnnotations,
+        updateAnnotationPosition,
 
         // TTS
         ttsActive,

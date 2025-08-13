@@ -36,6 +36,10 @@ export default function Actions() {
     stopTTS,
     ttsTimer,
     currentPageText,
+    currentAnnotationText,
+    setCurrentAnnotationText,
+    addAnnotation,
+    clearAnnotations,
   } = useContext(AppContext);
 
   const handlePlayStop = () => {
@@ -62,9 +66,13 @@ export default function Actions() {
     setHiglightMode((prev) =>
       prev === HIGHLIGHT_MODES.ON ? HIGHLIGHT_MODES.OFF : HIGHLIGHT_MODES.ON
     );
-  const clearHighlights = () => {};
-  const clearAnnotations = () => {};
-  const addAnnotation = () => {};
+
+  const handleAddAnnotation = () => {
+    if (currentAnnotationText.trim()) {
+      addAnnotation(currentAnnotationText);
+      setCurrentAnnotationText('');
+    }
+  };
 
   return (
     <div className={styles.actions}>
@@ -117,13 +125,17 @@ export default function Actions() {
         </div>
         <Button
           label="Clear Highlights"
-          onClick={clearHighlights}
+          onClick={() => console.log('CLEARING HIGHLIGHTS')}
           className={styles.btnClearHighlights}
         />
       </div>
 
       <div className={styles.annotationControls}>
-        <textarea placeholder="Add text annotation..."></textarea>
+        <textarea
+          placeholder="Add text annotation..."
+          value={currentAnnotationText}
+          onChange={(e) => setCurrentAnnotationText(e.target.value)}
+        />
         <Button
           label="Clear Annotations"
           onClick={clearAnnotations}
@@ -131,8 +143,9 @@ export default function Actions() {
         />
         <Button
           label="Add Text Annotation"
-          onClick={addAnnotation}
+          onClick={handleAddAnnotation}
           className={styles.btnPurple}
+          disabled={!currentAnnotationText.trim()}
         />
       </div>
     </div>

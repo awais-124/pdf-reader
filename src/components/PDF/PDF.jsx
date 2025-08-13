@@ -10,10 +10,79 @@ import styles from './PDF.module.css';
 import { AppContext } from '../../context/AppContext';
 
 export default function PDF() {
-  const { pdfDoc, currentPage, totalPages, scale } = useContext(AppContext);
+  const { pdfDoc, currentPage, totalPages, scale, annotations } =
+    useContext(AppContext);
+
   const canvasRef = useRef(null);
   const highlightLayerRef = useRef(null);
   const annotationLayerRef = useRef(null);
+
+  useEffect(() => {
+    if (!annotationLayerRef.current) return;
+
+    // Clear previous annotations
+    annotationLayerRef.current.innerHTML = '';
+
+    // Render annotations for current page
+    annotations
+      .filter((ann) => ann.page === currentPage)
+      .forEach((annotation) => {
+        const annEl = document.createElement('div');
+        annEl.className = 'text-annotation collapsed';
+        annEl.style.left = `${annotation.x}px`;
+        annEl.style.top = `${annotation.y}px`;
+
+        const textSpan = document.createElement('span');
+        textSpan.textContent = annotation.text;
+        textSpan.style.display = 'none';
+
+        const closeBtn = document.createElement('span');
+        closeBtn.className = 'annotation-close';
+        closeBtn.textContent = '×';
+        closeBtn.onclick = (e) => {
+          e.stopPropagation();
+          removeAnnotation(annotation.id);
+        };
+
+        annEl.appendChild(textSpan);
+        annEl.appendChild(closeBtn);
+        annotationLayerRef.current.appendChild(annEl);
+
+        // Toggle expand/collapse
+        annEl.onclick = () => {
+          annEl.classList.toggle('collapsed');
+          textSpan.style.display = annEl.classList.contains('collapsed')
+            ? 'none'
+            : 'block';
+        };
+
+        // Dragging logic
+        let isDragging = false;
+        let offsetX, offsetY;
+
+        annEl.onmousedown = (e) => {
+          if (e.target === annEl) {
+            isDragging = true;
+            offsetX = e.clientX - annotation.x;
+            offsetY = e.clientY - annotation.y;
+            e.preventDefault();
+          }
+        };
+
+        document.onmousemove = (e) => {
+          if (!isDragging) return;
+          const newX = e.clientX - offsetX;
+          const newY = e.clientY - offsetY;
+          updateAnnotationPosition(annotation.id, { x: newX, y: newY });
+          annEl.style.left = `${newX}px`;
+          annEl.style.top = `${newY}px`;
+        };
+
+        document.onmouseup = () => {
+          isDragging = false;
+        };
+      });
+  }, [annotations, currentPage]);
 
   useEffect(() => {
     let cancelled = false;
