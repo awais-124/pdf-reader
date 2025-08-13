@@ -1,0 +1,1155 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PDF Viewer with Enhanced Highlighting</title>
+    <link rel="stylesheet" href="/css/styles.css" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <style>
+      .highlight-cursor {
+        position: absolute;
+        pointer-events: none;
+        z-index: 10000;
+        mix-blend-mode: multiply;
+        opacity: 0.6;
+        display: none;
+        border-radius: 2px;
+      }
+      #pdf-container {
+        position: relative;
+        overflow: auto;
+        border: 1px solid #ccc;
+        margin-top: 1rem;
+      }
+      #pdf-render,
+      #highlight-canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+      }
+      #highlight-canvas {
+        pointer-events: none;
+        mix-blend-mode: multiply;
+      }
+      #text-layer {
+        position: absolute;
+        top: 0;
+        left: 0;
+        pointer-events: none;
+        opacity: 0.2;
+        mix-blend-mode: multiply;
+      }
+      .text-annotation {
+        position: absolute;
+        background: rgba(255, 255, 255, 0.95);
+        border: 1px solid #3b82f6;
+        padding: 8px;
+        cursor: pointer;
+        font-size: 12px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        max-width: 200px;
+        border-radius: 4px;
+        z-index: 1000;
+        transition: all 0.3s ease;
+      }
+      .text-annotation.collapsed {
+        height: 24px;
+        width: 24px;
+        overflow: hidden;
+        padding: 0;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #3b82f6;
+        color: white;
+      }
+      .text-annotation.collapsed::after {
+        content: '•••';
+        font-size: 14px;
+      }
+      .highlight {
+        position: absolute;
+        border-radius: 2px;
+        cursor: pointer;
+        mix-blend-mode: multiply;
+        opacity: 0.4;
+      }
+      .highlight-option {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border: 2px solid transparent;
+      }
+      .highlight-option.active {
+        border: 2px solid #000;
+        transform: scale(1.1);
+      }
+      .tts-controls {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+      }
+      .timer {
+        text-align: center;
+        font-size: 14px;
+        color: #4b5563;
+        margin-top: 4px;
+      }
+      .controls-group {
+        display: flex;
+        gap: 8px;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+      .remove-btn {
+        padding: 4px 8px;
+        background: #ef4444;
+        color: white;
+        border-radius: 4px;
+        font-size: 12px;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+      .remove-btn:hover {
+        background: #dc2626;
+      }
+      .annotation-close {
+        position: absolute;
+        right: 4px;
+        top: 4px;
+        width: 16px;
+        height: 16px;
+        line-height: 16px;
+        text-align: center;
+        border-radius: 50%;
+        background: #ef4444;
+        color: white;
+        cursor: pointer;
+        display: none;
+      }
+      .text-annotation:not(.collapsed) .annotation-close {
+        display: block;
+      }
+      .highlight-mode {
+        background-color: #e5e7eb;
+        border-radius: 4px;
+      }
+      .document-list {
+        max-height: 200px;
+        overflow-y: auto;
+        border: 1px solid #e5e7eb;
+        border-radius: 4px;
+        padding: 8px;
+        margin-top: 8px;
+      }
+      .document-item {
+        padding: 8px;
+        cursor: pointer;
+        border-radius: 4px;
+        margin-bottom: 4px;
+        display: flex;
+        justify-content: space-between;
+      }
+      .document-item:hover {
+        background-color: #f3f4f6;
+      }
+      .document-item.active {
+        background-color: #3b82f6;
+        color: white;
+      }
+      .document-actions {
+        display: flex;
+        gap: 8px;
+      }
+      .document-action {
+        padding: 2px 4px;
+        border-radius: 4px;
+        font-size: 12px;
+      }
+      .document-action.delete {
+        background-color: #ef4444;
+        color: white;
+      }
+      .status-indicator {
+        font-size: 12px;
+        color: #6b7280;
+        margin-left: 8px;
+      }
+      .saving {
+        color: #f59e0b;
+      }
+      .saved {
+        color: #10b981;
+      }
+    </style>
+  </head>
+  <body class="min-h-screen bg-gray-100 p-8">
+    <div class="max-w-6xl mx-auto">
+      <div class="bg-white p-6 rounded-lg shadow-lg">
+        <div id="controls" class="space-y-4">
+          <div>
+            <input
+              type="file"
+              id="pdf-upload"
+              accept="application/pdf"
+              class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+            />
+            <button
+              id="clear-document"
+              class="mt-2 py-1 px-3 bg-red-100 text-red-800 rounded text-sm hidden"
+            >
+              Remove Current Document
+            </button>
+            <div id="document-list" class="document-list hidden">
+              <div class="text-sm text-gray-500">No saved documents</div>
+            </div>
+          </div>
+
+          <div class="flex space-x-2">
+            <button
+              id="prev-page"
+              class="py-2 px-4 bg-gray-600 text-white rounded hover:bg-gray-700"
+            >
+              Previous
+            </button>
+            <span id="page-info" class="py-2">Page: 1 of 1</span>
+            <button
+              id="next-page"
+              class="py-2 px-4 bg-gray-600 text-white rounded hover:bg-gray-700"
+            >
+              Next
+            </button>
+          </div>
+
+          <div class="tts-controls">
+            <button
+              id="tts-play"
+              class="flex-1 py-2 px-4 bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              Play
+            </button>
+            <button
+              id="tts-pause"
+              class="flex-1 py-2 px-4 bg-yellow-600 text-white rounded hover:bg-yellow-700"
+            >
+              Pause
+            </button>
+            <button
+              id="tts-stop"
+              class="flex-1 py-2 px-4 bg-red-600 text-white rounded hover:bg-red-700"
+            >
+              Stop
+            </button>
+          </div>
+          <div id="tts-timer" class="timer">00:00</div>
+
+          <div class="controls-group">
+            <div class="flex space-x-2 items-center">
+              <button
+                id="toggle-highlight"
+                class="py-1 px-3 bg-blue-100 text-blue-800 rounded text-sm"
+              >
+                Highlight Mode: OFF
+              </button>
+              <span>Highlight Color:</span>
+              <div
+                class="highlight-option bg-yellow-300 active"
+                data-color="yellow"
+              ></div>
+              <div
+                class="highlight-option bg-green-300"
+                data-color="green"
+              ></div>
+              <div class="highlight-option bg-pink-300" data-color="pink"></div>
+            </div>
+            <button id="clear-highlights" class="remove-btn">
+              Clear Highlights
+            </button>
+          </div>
+
+          <div class="controls-group">
+            <textarea
+              id="text-annotation-input"
+              placeholder="Add text annotation..."
+              class="flex-1 p-2 border rounded"
+            ></textarea>
+            <button id="clear-annotations" class="remove-btn">
+              Clear Annotations
+            </button>
+          </div>
+          <button
+            id="add-text-annotation-btn"
+            class="w-full py-2 px-4 bg-purple-600 text-white rounded hover:bg-purple-700"
+          >
+            Add Text Annotation
+          </button>
+          <div id="status-indicator" class="status-indicator"></div>
+        </div>
+
+        <div id="pdf-container" class="mt-4" style="height: 800px">
+          <canvas id="pdf-render"></canvas>
+          <canvas id="highlight-canvas"></canvas>
+          <div id="highlight-cursor" class="highlight-cursor"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      pdfjsLib.GlobalWorkerOptions.workerSrc =
+        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+
+      // Highlight color variables
+      const HIGHLIGHT_COLORS = {
+        yellow: 'rgba(255, 255, 0, 0.6)',
+        green: 'rgba(0, 255, 0, 0.4)',
+        pink: 'rgba(255, 192, 203, 0.6)',
+      };
+
+      // State variables
+      let pdfDoc = null;
+      let pageNum = 1;
+      let pageRendering = false;
+      let pageNumPending = null;
+      let scale = 1.5;
+      let canvas = document.getElementById('pdf-render');
+      let ctx = canvas.getContext('2d');
+      const highlightCanvas = document.getElementById('highlight-canvas');
+      const highlightCtx = highlightCanvas.getContext('2d');
+      let currentHighlightColor = HIGHLIGHT_COLORS.yellow;
+      let textAnnotations = [];
+      let highlights = [];
+      let utterance = null;
+      let ttsTimer = null;
+      let ttsElapsedTime = 0;
+      let isDrawing = false;
+      let startX, startY, lastX, lastY;
+      let isHighlighting = false;
+      let textRects = [];
+      let currentLineHeight = 16;
+      let currentDocumentId = null;
+      let db = null;
+      let saveTimeout = null;
+      let dbInitialized = false;
+
+      // Initialize IndexedDB with proper error handling
+      async function initializeDatabase() {
+        return new Promise((resolve, reject) => {
+          const DB_NAME = 'PDFViewerDB';
+          const DB_VERSION = 3;
+          const STORE_NAME = 'documents';
+
+          const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+          request.onerror = (event) => {
+            console.error('Database error:', event.target.error);
+            reject(event.target.error);
+          };
+
+          request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains(STORE_NAME)) {
+              const store = db.createObjectStore(STORE_NAME, {
+                keyPath: 'id',
+              });
+              store.createIndex('name', 'name', { unique: false });
+              store.createIndex('lastOpened', 'lastOpened', { unique: false });
+              console.log('Database store created');
+            }
+          };
+
+          request.onsuccess = (event) => {
+            db = event.target.result;
+            db.onversionchange = () => {
+              db.close();
+              console.log('Database is outdated, please reload the page.');
+            };
+
+            // Verify the object store exists
+            if (!db.objectStoreNames.contains(STORE_NAME)) {
+              db.close();
+              console.error('Object store missing after initialization');
+              reject(new Error('Object store not created'));
+              return;
+            }
+
+            dbInitialized = true;
+            console.log('Database initialized successfully');
+            resolve(db);
+          };
+
+          request.onblocked = () => {
+            console.warn('Database upgrade blocked - please close other tabs');
+            reject(new Error('Database upgrade blocked'));
+          };
+        });
+      }
+
+      // Save document data to IndexedDB
+      async function saveDocument() {
+        if (!dbInitialized || !currentDocumentId) {
+          console.warn(
+            'Save aborted - database not ready or no document selected'
+          );
+          return;
+        }
+
+        const transaction = db.transaction(['documents'], 'readwrite');
+        const store = transaction.objectStore('documents');
+
+        try {
+          const document = await new Promise((resolve, reject) => {
+            const getRequest = store.get(currentDocumentId);
+            getRequest.onsuccess = () => resolve(getRequest.result);
+            getRequest.onerror = () => reject(getRequest.error);
+          });
+
+          if (!document) {
+            throw new Error('Document not found in database');
+          }
+
+          document.highlights = highlights;
+          document.annotations = textAnnotations;
+          document.lastOpened = new Date();
+
+          await new Promise((resolve, reject) => {
+            const putRequest = store.put(document);
+            putRequest.onsuccess = () => {
+              updateStatus('Saved', 'saved');
+              resolve();
+            };
+            putRequest.onerror = () => reject(putRequest.error);
+          });
+        } catch (error) {
+          console.error('Error saving document:', error);
+          updateStatus('Error saving', 'error');
+          throw error;
+        }
+      }
+
+      // Debounced save function
+      function debouncedSave() {
+        if (!dbInitialized) return;
+
+        updateStatus('Saving...', 'saving');
+        if (saveTimeout) {
+          clearTimeout(saveTimeout);
+        }
+        saveTimeout = setTimeout(() => {
+          saveDocument().catch((error) => {
+            console.error('Error in debounced save:', error);
+          });
+        }, 1000);
+      }
+
+      // Update status indicator
+      function updateStatus(text, state) {
+        const indicator = document.getElementById('status-indicator');
+        indicator.textContent = text;
+        indicator.className = 'status-indicator';
+        if (state) {
+          indicator.classList.add(state);
+        }
+      }
+
+      // Load document from IndexedDB
+      async function loadDocumentFromDB(id) {
+        if (!dbInitialized) {
+          throw new Error('Database not initialized');
+        }
+
+        const transaction = db.transaction(['documents'], 'readonly');
+        const store = transaction.objectStore('documents');
+
+        return new Promise((resolve, reject) => {
+          const request = store.get(id);
+
+          request.onsuccess = () => {
+            if (request.result) {
+              resolve(request.result);
+            } else {
+              reject(new Error('Document not found'));
+            }
+          };
+
+          request.onerror = () => {
+            reject(request.error);
+          };
+        });
+      }
+
+      // List all documents in IndexedDB
+      async function listDocuments() {
+        if (!dbInitialized) {
+          return [];
+        }
+
+        const transaction = db.transaction(['documents'], 'readonly');
+        const store = transaction.objectStore('documents');
+
+        return new Promise((resolve) => {
+          const request = store.getAll();
+
+          request.onsuccess = () => {
+            resolve(request.result || []);
+          };
+
+          request.onerror = () => {
+            console.error('Error listing documents:', request.error);
+            resolve([]);
+          };
+        });
+      }
+
+      // Delete document from IndexedDB
+      async function deleteDocument(id) {
+        if (!dbInitialized) {
+          throw new Error('Database not initialized');
+        }
+
+        const transaction = db.transaction(['documents'], 'readwrite');
+        const store = transaction.objectStore('documents');
+
+        return new Promise((resolve, reject) => {
+          const request = store.delete(id);
+
+          request.onsuccess = () => {
+            resolve();
+          };
+
+          request.onerror = () => {
+            reject(request.error);
+          };
+        });
+      }
+
+      // Render document list
+      async function renderDocumentList() {
+        const documents = await listDocuments();
+        const container = document.getElementById('document-list');
+        const clearBtn = document.getElementById('clear-document');
+
+        if (documents.length === 0) {
+          container.innerHTML =
+            '<div class="text-sm text-gray-500">No saved documents</div>';
+          container.classList.remove('hidden');
+          clearBtn.classList.add('hidden');
+          return;
+        }
+
+        container.innerHTML = '';
+        documents.forEach((doc) => {
+          const item = document.createElement('div');
+          item.className = `document-item ${
+            currentDocumentId === doc.id ? 'active' : ''
+          }`;
+          item.dataset.id = doc.id;
+
+          const docInfo = document.createElement('div');
+          docInfo.textContent = doc.name;
+
+          const actions = document.createElement('div');
+          actions.className = 'document-actions';
+
+          const deleteBtn = document.createElement('span');
+          deleteBtn.className = 'document-action delete';
+          deleteBtn.textContent = 'Delete';
+          deleteBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            if (confirm(`Delete "${doc.name}"?`)) {
+              try {
+                await deleteDocument(doc.id);
+                if (currentDocumentId === doc.id) {
+                  resetDocument();
+                }
+                await renderDocumentList();
+              } catch (error) {
+                console.error('Error deleting document:', error);
+                alert('Failed to delete document');
+              }
+            }
+          });
+
+          actions.appendChild(deleteBtn);
+          item.appendChild(docInfo);
+          item.appendChild(actions);
+          container.appendChild(item);
+
+          item.addEventListener('click', async () => {
+            try {
+              await loadDocument(doc.id);
+            } catch (error) {
+              console.error('Error loading document:', error);
+              alert('Failed to load document');
+            }
+          });
+        });
+
+        container.classList.remove('hidden');
+        clearBtn.classList.toggle('hidden', !currentDocumentId);
+      }
+
+      // Reset document state
+      function resetDocument() {
+        pdfDoc = null;
+        currentDocumentId = null;
+        pageNum = 1;
+        highlights = [];
+        textAnnotations = [];
+        document.getElementById('page-info').textContent = 'Page: 1 of 1';
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        highlightCtx.clearRect(
+          0,
+          0,
+          highlightCanvas.width,
+          highlightCanvas.height
+        );
+        document
+          .querySelectorAll('.text-annotation')
+          .forEach((el) => el.remove());
+        document.getElementById('pdf-upload').value = '';
+        renderDocumentList();
+      }
+
+      // Load document
+      async function loadDocument(id) {
+        try {
+          const document = await loadDocumentFromDB(id);
+          currentDocumentId = id;
+
+          if (!document.data) {
+            throw new Error('Document data is missing or corrupted');
+          }
+          // Load PDF
+          pdfDoc = await pdfjsLib.getDocument({ data: document.data }).promise;
+
+          // Load highlights and annotations
+          highlights = document.highlights || [];
+          textAnnotations = document.annotations || [];
+
+          // Update UI
+          window.document.getElementById(
+            'page-info'
+          ).textContent = `Page: 1 of ${pdfDoc.numPages}`;
+          window.document
+            .getElementById('clear-document')
+            .classList.remove('hidden');
+
+          // Render first page
+          pageNum = 1;
+          await renderPage(pageNum);
+          renderTextAnnotations();
+
+          // Update document list
+          await renderDocumentList();
+
+          // Update last opened time
+          debouncedSave();
+        } catch (error) {
+          console.error('Error loading document:', error.message || error);
+          alert("Failed to load PDF. Make sure the file isn't corrupted.");
+        }
+      }
+
+      // PDF Rendering Functions
+      async function renderPage(num) {
+        pageRendering = true;
+        const page = await pdfDoc.getPage(num);
+        const viewport = page.getViewport({ scale: scale });
+
+        canvas.height = highlightCanvas.height = viewport.height;
+        canvas.width = highlightCanvas.width = viewport.width;
+
+        await page.render({
+          canvasContext: ctx,
+          viewport: viewport,
+        }).promise;
+
+        await getTextRects(page);
+        renderHighlights();
+        pageRendering = false;
+      }
+
+      function renderHighlights() {
+        highlightCtx.clearRect(
+          0,
+          0,
+          highlightCanvas.width,
+          highlightCanvas.height
+        );
+        highlights.forEach((highlight) => {
+          if (highlight.page === pageNum) {
+            highlightCtx.fillStyle = highlight.color;
+            highlightCtx.fillRect(
+              highlight.x,
+              highlight.y,
+              highlight.width,
+              highlight.height
+            );
+          }
+        });
+      }
+
+      async function getTextRects(page) {
+        textRects = [];
+        const textContent = await page.getTextContent();
+        const viewport = page.getViewport({ scale: scale });
+
+        textContent.items.forEach((item) => {
+          const transform = pdfjsLib.Util.transform(
+            viewport.transform,
+            item.transform
+          );
+          textRects.push({
+            x: transform[4],
+            y: transform[5],
+            width: item.width,
+            height: item.height,
+            text: item.str,
+          });
+        });
+
+        if (textRects.length > 0) {
+          currentLineHeight = textRects[0].height;
+        }
+      }
+
+      // Create highlighter cursor SVG
+      function createCursorSVG(color, height) {
+        const size = Math.max(16, height);
+        const radius = size / 2;
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+    <circle cx="${radius}" cy="${radius}" r="${radius}" fill="${color}" opacity="0.6"/>
+    <circle cx="${radius}" cy="${radius}" r="${radius}" fill="none" stroke="#000" stroke-width="1" opacity="0.8"/>
+  </svg>`;
+        return `url('data:image/svg+xml;utf8,${encodeURIComponent(
+          svg
+        )}') ${radius} ${radius - 4}, auto`;
+      }
+
+      // Update cursor based on current color
+      function updateCursor() {
+        if (isHighlighting) {
+          const colorMatch = currentHighlightColor.match(
+            /rgba?\((\d+),\s*(\d+),\s*(\d+)/
+          );
+          const color = `rgb(${colorMatch[1]},${colorMatch[2]},${colorMatch[3]})`;
+          canvas.style.cursor = createCursorSVG(color, currentLineHeight);
+        } else {
+          canvas.style.cursor = 'auto';
+        }
+      }
+
+      // Initialize the application
+      async function init() {
+        try {
+          await initializeDatabase();
+          await renderDocumentList();
+
+          // Check if there's a last opened document
+          const documents = await listDocuments();
+          if (documents.length > 0) {
+            documents.sort(
+              (a, b) => new Date(b.lastOpened) - new Date(a.lastOpened)
+            );
+            try {
+              await loadDocument(documents[0].id);
+            } catch (error) {
+              console.error('Error loading last document:', error);
+            }
+          }
+        } catch (error) {
+          console.error('Initialization error:', error);
+          updateStatus('Failed to initialize storage', 'error');
+          document.getElementById('pdf-upload').disabled = true;
+        }
+      }
+
+      // Start the application
+      init();
+
+      // Event Listeners
+      document
+        .getElementById('pdf-upload')
+        .addEventListener('change', async function (e) {
+          const file = e.target.files[0];
+          if (!file || file.type !== 'application/pdf') {
+            console.error('Error: Not a PDF file');
+            return;
+          }
+
+          const reader = new FileReader();
+          reader.onload = async function (e) {
+            try {
+              if (!dbInitialized) {
+                await initializeDatabase();
+              }
+
+              const arrayBuffer = e.target.result;
+              const transaction = db.transaction(['documents'], 'readwrite');
+              const store = transaction.objectStore('documents');
+
+              const document = {
+                id: Date.now().toString(),
+                name: file.name,
+                data: arrayBuffer,
+                lastOpened: new Date(),
+                highlights: [],
+                annotations: [],
+              };
+
+              const request = store.add(document);
+
+              request.onsuccess = async () => {
+                currentDocumentId = document.id;
+                try {
+                  await loadDocument(document.id);
+                } catch (loadError) {
+                  console.error('Error loading after upload:', loadError);
+                  alert(
+                    'Document uploaded but failed to load. Please try again.'
+                  );
+                }
+              };
+
+              request.onerror = () => {
+                console.error('Error saving document:', request.error);
+                alert('Failed to save document. Please try again.');
+              };
+            } catch (error) {
+              console.error('Error handling PDF upload:', error);
+              alert('Failed to process PDF. Please try again.');
+            }
+          };
+
+          reader.onerror = () => {
+            console.error('FileReader error:', reader.error);
+            alert('Failed to read file. Please try again.');
+          };
+
+          reader.readAsArrayBuffer(file);
+        });
+
+      document
+        .getElementById('prev-page')
+        .addEventListener('click', function () {
+          if (pageNum <= 1) return;
+          pageNum--;
+          document.getElementById(
+            'page-info'
+          ).textContent = `Page: ${pageNum} of ${pdfDoc.numPages}`;
+          queueRenderPage(pageNum);
+        });
+
+      document
+        .getElementById('next-page')
+        .addEventListener('click', function () {
+          if (pageNum >= pdfDoc.numPages) return;
+          pageNum++;
+          document.getElementById(
+            'page-info'
+          ).textContent = `Page: ${pageNum} of ${pdfDoc.numPages}`;
+          queueRenderPage(pageNum);
+        });
+
+      function queueRenderPage(num) {
+        if (pageRendering) {
+          pageNumPending = num;
+        } else {
+          renderPage(num);
+        }
+      }
+
+      document
+        .getElementById('toggle-highlight')
+        .addEventListener('click', function () {
+          isHighlighting = !isHighlighting;
+          this.classList.toggle('highlight-mode', isHighlighting);
+          this.textContent = `Highlight Mode: ${isHighlighting ? 'ON' : 'OFF'}`;
+          updateCursor();
+        });
+
+      canvas.addEventListener('mousedown', function (e) {
+        if (!isHighlighting) return;
+
+        const rect = canvas.getBoundingClientRect();
+        startX = lastX = e.clientX - rect.left;
+        startY = lastY = e.clientY - rect.top;
+
+        const clickedLine = textRects.find(
+          (t) => startY >= t.y && startY <= t.y + t.height
+        );
+        if (clickedLine) {
+          startY = clickedLine.y;
+          currentLineHeight = clickedLine.height;
+        }
+
+        isDrawing = true;
+        /*
+        highlightCtx.clearRect(
+          0,
+          0,
+          highlightCanvas.width,
+          highlightCanvas.height
+        );
+        */
+      });
+
+      canvas.addEventListener('mousemove', function (e) {
+        if (!isHighlighting) return;
+
+        const rect = canvas.getBoundingClientRect();
+        const currentX = e.clientX - rect.left;
+        const currentY = e.clientY - rect.top;
+
+        if (isDrawing) {
+          renderHighlights();
+
+          highlightCtx.fillStyle = currentHighlightColor;
+          highlightCtx.fillRect(
+            Math.min(startX, currentX),
+            startY,
+            Math.abs(currentX - startX),
+            currentLineHeight
+          );
+        } else {
+          const hoveredLine = textRects.find(
+            (t) => currentY >= t.y && currentY <= t.y + t.height
+          );
+          if (hoveredLine) {
+            currentLineHeight = hoveredLine.height;
+          }
+          updateCursor();
+        }
+      });
+
+      canvas.addEventListener('mouseup', function (e) {
+        if (!isHighlighting || !isDrawing) return;
+        isDrawing = false;
+
+        const rect = canvas.getBoundingClientRect();
+        const currentX = e.clientX - rect.left;
+
+        highlights.push({
+          x: Math.min(startX, currentX),
+          y: startY,
+          width: Math.abs(currentX - startX),
+          height: currentLineHeight,
+          color: currentHighlightColor,
+          page: pageNum,
+        });
+
+        renderHighlights();
+        debouncedSave();
+      });
+
+      document.querySelectorAll('.highlight-option').forEach((option) => {
+        option.addEventListener('click', function () {
+          document.querySelectorAll('.highlight-option').forEach((opt) => {
+            opt.classList.remove('active');
+          });
+          this.classList.add('active');
+          currentHighlightColor = HIGHLIGHT_COLORS[this.dataset.color];
+          updateCursor();
+        });
+      });
+
+      document
+        .getElementById('tts-play')
+        .addEventListener('click', async () => {
+          if (!pdfDoc) return;
+
+          if (utterance && speechSynthesis.paused) {
+            speechSynthesis.resume();
+            startTimer();
+            return;
+          }
+
+          const page = await pdfDoc.getPage(pageNum);
+          const textContent = await page.getTextContent();
+          const text = textContent.items.map((item) => item.str).join(' ');
+
+          utterance = new SpeechSynthesisUtterance(text);
+          utterance.lang = 'en-US';
+          utterance.onend = () => {
+            stopTimer();
+            ttsElapsedTime = 0;
+          };
+
+          speechSynthesis.speak(utterance);
+          startTimer();
+        });
+
+      document.getElementById('tts-pause').addEventListener('click', () => {
+        speechSynthesis.pause();
+        stopTimer();
+      });
+
+      document.getElementById('tts-stop').addEventListener('click', () => {
+        speechSynthesis.cancel();
+        stopTimer();
+        ttsElapsedTime = 0;
+        document.getElementById('tts-timer').textContent = '00:00';
+      });
+
+      function startTimer() {
+        stopTimer();
+        ttsTimer = setInterval(() => {
+          ttsElapsedTime++;
+          const minutes = Math.floor(ttsElapsedTime / 60);
+          const seconds = ttsElapsedTime % 60;
+          document.getElementById('tts-timer').textContent = `${minutes
+            .toString()
+            .padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }, 1000);
+      }
+
+      function stopTimer() {
+        if (ttsTimer) {
+          clearInterval(ttsTimer);
+          ttsTimer = null;
+        }
+      }
+
+      document
+        .getElementById('add-text-annotation-btn')
+        .addEventListener('click', () => {
+          const text = document
+            .getElementById('text-annotation-input')
+            .value.trim();
+          if (!text) return;
+
+          textAnnotations.push({
+            text: text,
+            x: 50,
+            y: 50,
+            page: pageNum,
+          });
+
+          document.getElementById('text-annotation-input').value = '';
+          renderTextAnnotations();
+          debouncedSave();
+        });
+
+      function renderTextAnnotations() {
+        document
+          .querySelectorAll('.text-annotation')
+          .forEach((el) => el.remove());
+
+        textAnnotations.forEach((annotation, index) => {
+          if (annotation.page === pageNum) {
+            const div = document.createElement('div');
+            div.className = 'text-annotation collapsed';
+            div.style.left = `${annotation.x}px`;
+            div.style.top = `${annotation.y}px`;
+
+            const textSpan = document.createElement('span');
+            textSpan.textContent = annotation.text;
+            textSpan.style.display = 'none';
+
+            const closeBtn = document.createElement('span');
+            closeBtn.className = 'annotation-close';
+            closeBtn.textContent = '×';
+            closeBtn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              textAnnotations.splice(index, 1);
+              renderTextAnnotations();
+              debouncedSave();
+            });
+
+            div.appendChild(textSpan);
+            div.appendChild(closeBtn);
+            document.getElementById('pdf-container').appendChild(div);
+
+            div.addEventListener('click', () => {
+              div.classList.toggle('collapsed');
+              textSpan.style.display = div.classList.contains('collapsed')
+                ? 'none'
+                : 'block';
+            });
+
+            let isDragging = false;
+            let offsetX, offsetY;
+
+            div.addEventListener('mousedown', (e) => {
+              if (e.target === div) {
+                isDragging = true;
+                offsetX = e.clientX - annotation.x;
+                offsetY = e.clientY - annotation.y;
+                e.preventDefault();
+              }
+            });
+
+            document.addEventListener('mousemove', (e) => {
+              if (!isDragging) return;
+              annotation.x = e.clientX - offsetX;
+              annotation.y = e.clientY - offsetY;
+              div.style.left = `${annotation.x}px`;
+              div.style.top = `${annotation.y}px`;
+            });
+
+            document.addEventListener('mouseup', () => {
+              isDragging = false;
+              debouncedSave();
+            });
+          }
+        });
+      }
+
+      document
+        .getElementById('clear-highlights')
+        .addEventListener('click', () => {
+          highlights = highlights.filter((h) => h.page !== pageNum);
+          renderPage(pageNum);
+          debouncedSave();
+        });
+
+      document
+        .getElementById('clear-annotations')
+        .addEventListener('click', () => {
+          textAnnotations = textAnnotations.filter((a) => a.page !== pageNum);
+          renderTextAnnotations();
+          debouncedSave();
+        });
+
+      document
+        .getElementById('clear-document')
+        .addEventListener('click', async () => {
+          if (confirm('Remove current document?')) {
+            try {
+              await deleteDocument(currentDocumentId);
+              resetDocument();
+            } catch (error) {
+              console.error('Error deleting document:', error);
+              alert('Failed to remove document');
+            }
+          }
+        });
+
+      canvas.addEventListener('contextmenu', function (e) {
+        e.preventDefault();
+        const rect = canvas.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        const clickY = e.clientY - rect.top;
+
+        highlights = highlights.filter((highlight) => {
+          return !(
+            clickX >= highlight.x &&
+            clickX <= highlight.x + highlight.width &&
+            clickY >= highlight.y &&
+            clickY <= highlight.y + highlight.height &&
+            highlight.page === pageNum
+          );
+        });
+
+        renderPage(pageNum);
+        debouncedSave();
+      });
+    </script>
+  </body>
+</html>

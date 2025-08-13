@@ -1,0 +1,164 @@
+/**
+ * index.css
+ * ------------------------------
+ * Global styles and utility classes used across the application.
+ * 
+ * Purpose:
+ * 1. Provide a consistent reset for margin, padding, box-sizing, and transitions.
+ * 2. Define generic layout helpers like `.row` and `.col` for quick flexbox layouts.
+ * 3. Define spacing, alignment, typography, and common UI helpers
+ *    to speed up component styling without repeating code.
+ * 
+ * Note:
+ * - Keep this file limited to resets and global utilities.
+ * - All feature-specific styles should be placed inside CSS Modules for their components.
+ */
+
+/* --- Reset & Base Styles --- */
+* {
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+  transition: all 0.3s ease;
+  font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande',
+    'Lucida Sans', Arial, sans-serif;
+}
+
+*:hover {
+  transition: all 0.3s ease;
+}
+
+*:focus {
+  outline: none;
+}
+
+html,
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: #f8f9fa;
+  color: #333;
+  min-height: 100vh;
+}
+
+/* --- Layout Utilities --- */
+.row {
+  display: flex;
+  flex-direction: row;
+}
+
+.col {
+  display: flex;
+  flex-direction: column;
+}
+
+.center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.space-between {
+  display: flex;
+  justify-content: space-between;
+}
+
+.space-around {
+  display: flex;
+  justify-content: space-around;
+}
+
+.wrap {
+  flex-wrap: wrap;
+}
+
+/* --- Spacing Utilities --- */
+.p-1 {
+  padding: 4px;
+}
+.p-2 {
+  padding: 8px;
+}
+.p-3 {
+  padding: 12px;
+}
+.p-4 {
+  padding: 16px;
+}
+
+.m-1 {
+  margin: 4px;
+}
+.m-2 {
+  margin: 8px;
+}
+.m-3 {
+  margin: 12px;
+}
+.m-4 {
+  margin: 16px;
+}
+
+/* --- Text Utilities --- */
+.text-center {
+  text-align: center;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.bold {
+  font-weight: bold;
+}
+
+.italic {
+  font-style: italic;
+}
+
+/* --- Common Button Base --- */
+.btn {
+  padding: 8px 16px;
+  border-radius: 4px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+/* Button color variations */
+.btn-primary {
+  background-color: #007bff;
+  color: white;
+}
+
+.btn-danger {
+  background-color: #dc3545;
+  color: white;
+}
+
+.btn-success {
+  background-color: #28a745;
+  color: white;
+}
+
+.btn-warning {
+  background-color: #ffc107;
+  color: black;
+}
+
+/* --- Utility Borders & Shadows --- */
+.rounded {
+  border-radius: 8px;
+}
+
+.shadow {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}

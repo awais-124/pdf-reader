@@ -1,0 +1,104 @@
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pageNav,
+.ttsControls,
+.highlightControls,
+.annotationControls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.highlightControls {
+  justify-content: space-between;
+}
+
+.annotationControls {
+  align-items: flex-start;
+}
+
+/* Make TTS buttons equal width (1/3) */
+.ttsControls {
+  width: 100%;
+}
+
+.ttsControls>button {
+  flex: 1 1 calc(33.333% - 8px);
+  text-align: center;
+}
+
+/* Color variants for Buttons */
+.btnBlue {
+  background-color: #1e5eff;
+  color: white;
+}
+
+.btnOrange {
+  background-color: #cc8a00;
+  color: white;
+}
+
+.btnPurple {
+  background-color: #9c27b0;
+  color: white;
+}
+
+.btnClearHighlights {
+  background-color: #dc3545;
+  color: white;
+  width: 200px;
+
+}
+
+.highlightMode {
+  width: 250px;
+}
+
+/* Highlight color dots */
+.colorDot {
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  display: inline-block;
+  cursor: pointer;
+  border: 2px solid transparent;
+  margin-right: 5px;
+}
+
+.highlightColorsHeading {
+  margin-right: 5px;
+}
+
+.activeColor {
+  border: 2px solid #000;
+}
+
+/* Annotation area */
+.annotationControls textarea {
+  flex: 1;
+  padding: 6px;
+  min-height: 50px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.ttsTimer {
+  font-size: 14px;
+  color: #555;
+  font-weight: 600;
+  margin-bottom: 6px;
+  text-align: center;
+  font-family: cursive;
+}
+
+.highlightColors {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}

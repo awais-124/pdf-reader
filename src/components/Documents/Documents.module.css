@@ -1,0 +1,64 @@
+.documents {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.uploadRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* Push remove button to right */
+  gap: 12px;
+  width: 100%;
+}
+
+/* Style for native file input */
+.fileInput {
+  flex: 1; /* take remaining space */
+  padding: 6px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background-color: white;
+  cursor: pointer;
+}
+
+/* Button colors */
+.btnPrimary {
+  background-color: #1e5eff;
+  color: white;
+}
+
+.btnDanger {
+  background-color: #dc3545;
+  color: white;
+}
+
+/* Document list styles */
+.docList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid #1e5eff;
+  border-radius: 10px;
+}
+
+.docItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px;
+  background-color: #f4f4f4;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.docItem:hover {
+  background-color: #3b82f6;
+}
+
+.activeDoc {
+  background-color: #3b82f6;
+  color: white;
+}

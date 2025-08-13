@@ -1,0 +1,42 @@
+.pdfContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  background-color: #f9f9f9;
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+}
+
+.pageInfo {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.pdfWrapper {
+  position: relative;
+  display: inline-block;
+}
+
+/* PDF Canvas */
+.pdfCanvas {
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+/* Highlight Layer */
+.highlightLayer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none; /* highlights drawn here won't block interactions */
+}
+
+/* Annotation Layer */
+.annotationLayer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none; /* annotations drawn here won't block interactions */
+}

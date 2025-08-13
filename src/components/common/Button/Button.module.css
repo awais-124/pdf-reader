@@ -1,0 +1,36 @@
+.btn {
+  padding: 8px 14px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  min-height: 40px;
+  transition: background-color 0.2s ease-in-out;
+  font-size: 16px;
+}
+
+/* Color variants (can be combined with btn) */
+.btnBlue {
+  background-color: #1e5eff;
+  color: white;
+}
+
+.btnOrange {
+  background-color: #cc8a00;
+  color: white;
+}
+
+.btnRed {
+  background-color: #dc3545;
+  color: white;
+}
+
+.btnPurple {
+  background-color: #9c27b0;
+  color: white;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

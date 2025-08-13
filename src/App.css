@@ -1,0 +1,33 @@
+/**
+ * App.css
+ * ------------------------------
+ * Layout styles for the App component.
+ * 
+ * .app-wrapper → Centers the whole app and applies padding/background.
+ * .app-container → Holds the app sections in vertical layout.
+ */
+
+/* Center the app on screen */
+.app-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start; /* Start from top with padding */
+  min-height: 100vh;
+  background-color: #f0f2f5;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+/* Main app container */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: white;
+  border-radius: 10px;
+  padding: 16px;
+  width: 100%;
+  max-width: 1200px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+  box-sizing: border-box;
+}
