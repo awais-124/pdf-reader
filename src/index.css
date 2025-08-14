@@ -19,13 +19,13 @@
   padding: 0;
   margin: 0;
   box-sizing: border-box;
-  transition: all 0.3s ease;
+  transition: all 0.5s ease;
   font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande',
     'Lucida Sans', Arial, sans-serif;
 }
 
 *:hover {
-  transition: all 0.3s ease;
+  transition: all 0.5s ease;
 }
 
 *:focus {
@@ -75,12 +75,15 @@ body {
 .p-1 {
   padding: 4px;
 }
+
 .p-2 {
   padding: 8px;
 }
+
 .p-3 {
   padding: 12px;
 }
+
 .p-4 {
   padding: 16px;
 }
@@ -88,12 +91,15 @@ body {
 .m-1 {
   margin: 4px;
 }
+
 .m-2 {
   margin: 8px;
 }
+
 .m-3 {
   margin: 12px;
 }
+
 .m-4 {
   margin: 16px;
 }

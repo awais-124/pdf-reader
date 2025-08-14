@@ -41,3 +41,9 @@ export const HIGHLIGHT_MODES = {
   OFF: 'OFF',
   NULL: 'NONE',
 };
+
+export const ANNOTATIONS_POSITION = {
+  INITIAL_X: 50,
+  INITIAL_Y: 50,
+  GAP: 30,
+};

@@ -7,13 +7,14 @@
  * - Keeps TTS/highlights/annotations placeholders as before.
  */
 
-import React, {
+import {
   createContext,
   useCallback,
   useState,
   useEffect,
   useRef,
   useContext,
+  useMemo,
 } from 'react';
 
 import { DbContext } from './DbContext.jsx';
@@ -32,12 +33,13 @@ import {
   DB_CONFIG,
   TTS_DEFAULT_RATE,
   DEFAULT_PDF_SCALE,
+  ANNOTATIONS_POSITION,
 } from '../constants/appConstants.js';
 
 export const AppContext = createContext();
 
 export const AppProvider = ({ children }) => {
-  const { saveAnnotations, dbReady } = useContext(DbContext);
+  const { saveAnnotations, dbReady, getDocumentById } = useContext(DbContext);
 
   const timerRef = useRef(null);
 
@@ -79,7 +81,15 @@ export const AppProvider = ({ children }) => {
 
   const loadPdfFromBlob = useCallback(
     async (blob, name, docId) => {
-      if (!blob) return;
+      if (!blob) {
+        // Clear everything when no document is loaded
+        setPdfDoc(null);
+        setCurrentDocumentId(null);
+        setCurrentDocumentName(null);
+        setAnnotations([]); // Clear annotations
+        return;
+      }
+
       const data = await blob.arrayBuffer();
       const loadingTask = pdfjsLib.getDocument({ data });
       const doc = await loadingTask.promise;
@@ -87,9 +97,21 @@ export const AppProvider = ({ children }) => {
       setPdfDoc(doc);
       setTotalPages(doc.numPages);
       setCurrentPage(1);
+      setAnnotations([]); // Clear existing annotations first
 
       if (name) setCurrentDocumentName(name);
-      if (docId) setCurrentDocumentId(docId);
+      if (docId) {
+        setCurrentDocumentId(docId);
+        // Load saved annotations for this document
+        try {
+          const documentData = await getDocumentById(docId);
+          if (documentData?.annotations) {
+            setAnnotations(documentData.annotations);
+          }
+        } catch (error) {
+          console.error('Error loading annotations:', error);
+        }
+      }
 
       // Extract first page's text right away
       const firstPageText = await extractTextFromPage(doc, 1);
@@ -130,19 +152,36 @@ export const AppProvider = ({ children }) => {
 
   // --- Annotation Functions (stubs kept) ---
   const addAnnotation = useCallback(
-    (text, position = { x: 50, y: 50 }) => {
+    (
+      text,
+      position = {
+        x: ANNOTATIONS_POSITION.INITIAL_X,
+        y: ANNOTATIONS_POSITION.INITIAL_Y,
+      }
+    ) => {
       if (!text.trim()) return;
 
-      const newAnnotation = {
-        id: uuidv4(),
-        text,
-        x: position.x,
-        y: position.y,
-        page: currentPage,
-        createdAt: new Date().toISOString(),
-      };
+      let newAnnotation = {};
 
-      setAnnotations((prev) => [...prev, newAnnotation]);
+      setAnnotations((prev) => {
+        const gap = ANNOTATIONS_POSITION.GAP;
+        let new_Y =
+          position.y === ANNOTATIONS_POSITION.INITIAL_Y
+            ? (prev.length + 1) * gap
+            : (prev.length + 1) * position.y;
+
+        newAnnotation = {
+          id: uuidv4(),
+          text,
+          x: position.x,
+          y: new_Y,
+          page: currentPage,
+          createdAt: new Date().toISOString(),
+        };
+        console.log(prev.length);
+        return [newAnnotation, ...prev];
+      });
+
       return newAnnotation;
     },
     [currentPage]
@@ -156,10 +195,22 @@ export const AppProvider = ({ children }) => {
     setAnnotations((prev) => prev.filter((ann) => ann.page !== currentPage));
   }, [currentPage]);
 
+  // OPTIMIZED: Use functional update to minimize re-renders
   const updateAnnotationPosition = useCallback((id, newPosition) => {
-    setAnnotations((prev) =>
-      prev.map((ann) => (ann.id === id ? { ...ann, ...newPosition } : ann))
-    );
+    setAnnotations((prev) => {
+      const index = prev.findIndex((ann) => ann.id === id);
+      if (index === -1) return prev;
+
+      const current = prev[index];
+      // Only update if position actually changed
+      if (current.x === newPosition.x && current.y === newPosition.y) {
+        return prev;
+      }
+
+      const updated = [...prev];
+      updated[index] = { ...current, ...newPosition };
+      return updated;
+    });
   }, []);
 
   const startTTS = useCallback(
@@ -229,71 +280,125 @@ export const AppProvider = ({ children }) => {
   }, [pdfDoc, currentPage, extractTextFromPage]);
 
   useEffect(() => {
-    if (currentDocumentId && dbReady) {
-      saveAnnotations(currentDocumentId, annotations);
-    }
+    const saveAnnotationsToDb = async () => {
+      if (currentDocumentId && dbReady && annotations.length > 0) {
+        try {
+          console.log('Saving annotations:', annotations);
+          await saveAnnotations(currentDocumentId, annotations);
+          console.log('Annotations saved successfully');
+        } catch (error) {
+          console.error('Failed to save annotations:', error);
+        }
+      }
+    };
+
+    // Add a small debounce to prevent rapid saves
+    const timer = setTimeout(saveAnnotationsToDb, 500);
+
+    return () => clearTimeout(timer);
   }, [annotations, currentDocumentId, dbReady, saveAnnotations]);
 
+  const contextValue = useMemo(
+    () => ({
+      // PDF
+      pdfDoc,
+      currentPage,
+      totalPages,
+      scale,
+      setScale,
+      loadPdfFromBlob,
+      goToPage,
+      nextPage,
+      prevPage,
+      currentPageText,
+
+      // Selected doc
+      currentDocumentId,
+      setCurrentDocumentId,
+      currentDocumentName,
+      setCurrentDocumentName,
+
+      // Highlights
+      highlights,
+      addHighlight,
+      removeHighlight,
+      clearHighlights,
+      currentHighlightColor,
+      setCurrentHighlightColor,
+      brushSize,
+      setBrushSize,
+
+      // Annotations
+      annotations,
+      currentAnnotationText,
+      setCurrentAnnotationText,
+      addAnnotation,
+      removeAnnotation,
+      clearAnnotations,
+      updateAnnotationPosition,
+
+      // TTS
+      ttsActive,
+      ttsPaused,
+      ttsTimer,
+      setTtsTimer,
+      ttsRate,
+      setTtsRate,
+      startTTS,
+      pauseTTS,
+      resumeTTS,
+      stopTTS,
+
+      // Constants
+      HIGHLIGHT_COLORS,
+      BRUSH_SIZES,
+      TIMER_INTERVAL_MS,
+      DB_CONFIG,
+    }),
+    [
+      pdfDoc,
+      currentPage,
+      totalPages,
+      scale,
+      setScale,
+      loadPdfFromBlob,
+      goToPage,
+      nextPage,
+      prevPage,
+      currentPageText,
+      currentDocumentId,
+      setCurrentDocumentId,
+      currentDocumentName,
+      setCurrentDocumentName,
+      highlights,
+      addHighlight,
+      removeHighlight,
+      clearHighlights,
+      currentHighlightColor,
+      setCurrentHighlightColor,
+      brushSize,
+      setBrushSize,
+      annotations,
+      currentAnnotationText,
+      setCurrentAnnotationText,
+      addAnnotation,
+      removeAnnotation,
+      clearAnnotations,
+      updateAnnotationPosition,
+      ttsActive,
+      ttsPaused,
+      ttsTimer,
+      setTtsTimer,
+      ttsRate,
+      setTtsRate,
+      startTTS,
+      pauseTTS,
+      resumeTTS,
+      stopTTS,
+    ]
+  );
+
   return (
-    <AppContext.Provider
-      value={{
-        // PDF
-        pdfDoc,
-        currentPage,
-        totalPages,
-        scale,
-        setScale,
-        loadPdfFromBlob,
-        goToPage,
-        nextPage,
-        prevPage,
-        currentPageText,
-
-        // Selected doc
-        currentDocumentId,
-        setCurrentDocumentId,
-        currentDocumentName,
-        setCurrentDocumentName,
-
-        // Highlights
-        highlights,
-        addHighlight,
-        removeHighlight,
-        clearHighlights,
-        currentHighlightColor,
-        setCurrentHighlightColor,
-        brushSize,
-        setBrushSize,
-
-        // Annotations
-        annotations,
-        currentAnnotationText,
-        setCurrentAnnotationText,
-        addAnnotation,
-        removeAnnotation,
-        clearAnnotations,
-        updateAnnotationPosition,
-
-        // TTS
-        ttsActive,
-        ttsPaused,
-        ttsTimer,
-        setTtsTimer,
-        ttsRate,
-        setTtsRate,
-        startTTS,
-        pauseTTS,
-        resumeTTS,
-        stopTTS,
-
-        // Constants
-        HIGHLIGHT_COLORS,
-        BRUSH_SIZES,
-        TIMER_INTERVAL_MS,
-        DB_CONFIG,
-      }}
-    >
-      {children}
-    </AppContext.Provider>
+    <AppContext.Provider value={contextValue}>{children}</AppContext.Provider>
   );
 };

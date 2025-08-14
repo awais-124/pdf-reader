@@ -48,6 +48,26 @@
   color: white;
 }
 
+.addAnnotation {
+  background-color: #9c27b0;
+  color: white;
+  height: 50px;
+}
+
+.clearAnnotation {
+  background-color: #dc3545;
+  color: white;
+  height: 50px;
+}
+
+.annotationControls textarea {
+  flex: 1;
+  padding: 6px;
+  min-height: 50px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
 .btnClearHighlights {
   background-color: #dc3545;
   color: white;
@@ -79,13 +99,6 @@
 }
 
 /* Annotation area */
-.annotationControls textarea {
-  flex: 1;
-  padding: 6px;
-  min-height: 50px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-}
 
 .ttsTimer {
   font-size: 14px;

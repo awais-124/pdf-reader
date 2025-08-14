@@ -17,6 +17,7 @@
 .pdfWrapper {
   position: relative;
   display: inline-block;
+  overflow: auto;
 }
 
 /* PDF Canvas */
@@ -34,27 +35,33 @@
   /* highlights drawn here won't block interactions */
 }
 
-/* Annotation Layer */
-.annotationLayer {
-  position: absolute;
-  top: 0;
-  left: 0;
-  pointer-events: none;
-  /* annotations drawn here won't block interactions */
-}
-
 .text-annotation {
   position: absolute;
   background: rgba(255, 255, 255, 0.95);
   border: 1px solid #3b82f6;
   padding: 8px;
+  padding-right: 40px;
   cursor: pointer;
   font-size: 12px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  max-width: 200px;
+  max-width: 80%;
   border-radius: 4px;
   z-index: 1000;
   transition: all 0.3s ease;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+}
+
+.text-annotation p {
+  word-break: break-word;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  line-height: 1;
+  word-spacing: 2px;
+  letter-spacing: 1px;
+  text-align: justify;
 }
 
 .text-annotation.collapsed {
@@ -79,13 +86,20 @@
   position: absolute;
   right: 4px;
   top: 4px;
-  width: 20px;
-  height: 20px;
-  line-height: 16px;
+  width: 16px;
+  height: 16px;
   text-align: center;
-  border-radius: 50%;
-  background: #ef4444;
-  color: white;
+  cursor: pointer;
+  display: none;
+}
+
+.annotation-collapse {
+  position: absolute;
+  right: 20px;
+  top: 4px;
+  width: 16px;
+  height: 16px;
+  text-align: center;
   cursor: pointer;
   display: none;
 }
@@ -94,9 +108,45 @@
   display: block;
 }
 
+.text-annotation:not(.collapsed) .annotation-collapse {
+  display: block;
+}
+
+/* Add these styles to your existing PDF.module.css */
+
 .annotationLayer {
   position: absolute;
   top: 0;
   left: 0;
+  width: 100%;
+  height: 100%;
   pointer-events: none;
+  /* Allow clicks through to PDF */
+  z-index: 3;
+}
+
+.text-annotation {
+  position: absolute;
+  pointer-events: auto;
+  /* Re-enable for annotations */
+  user-select: none;
+  touch-action: none;
+  /* Prevent touch scrolling during drag */
+  will-change: transform;
+  /* Optimize for animations */
+  transition: none;
+  /* Remove transitions during drag */
+}
+
+.text-annotation:active {
+  z-index: 1000;
+  /* Bring to front when dragging */
+}
+
+/* Improve performance with hardware acceleration */
+.text-annotation {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
 }

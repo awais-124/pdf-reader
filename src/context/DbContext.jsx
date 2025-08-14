@@ -78,11 +78,20 @@ export const DbProvider = ({ children }) => {
   const saveDocumentData = useCallback(
     async (id, data) => {
       const db = getDb();
-      if (!db) return null;
+      if (!db) {
+        console.error('Database not available');
+        return null;
+      }
 
       try {
-        const document = await db.get(DB_CONFIG.storeName, id);
-        if (!document) return null;
+        const tx = db.transaction(DB_CONFIG.storeName, 'readwrite');
+        const store = tx.objectStore(DB_CONFIG.storeName);
+
+        const document = await store.get(id);
+        if (!document) {
+          console.error('Document not found:', id);
+          return null;
+        }
 
         const updatedDoc = {
           ...document,
@@ -90,12 +99,15 @@ export const DbProvider = ({ children }) => {
           lastOpened: new Date().toISOString(),
         };
 
-        await db.put(DB_CONFIG.storeName, updatedDoc);
+        await store.put(updatedDoc);
+        await tx.done;
+
+        console.log('Document data saved successfully:', updatedDoc);
         await refreshDocs(db);
         return updatedDoc;
       } catch (error) {
         console.error('Error saving document data:', error);
-        return null;
+        throw error; // Re-throw to handle in calling function
       }
     },
     [refreshDocs]

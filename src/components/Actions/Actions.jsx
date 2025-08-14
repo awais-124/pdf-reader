@@ -103,6 +103,25 @@ export default function Actions() {
         <div className={styles.ttsTimer}>{formatTime(ttsTimer)}</div>
       )}
 
+      <div className={styles.annotationControls}>
+        <textarea
+          placeholder="Add text annotation..."
+          value={currentAnnotationText}
+          onChange={(e) => setCurrentAnnotationText(e.target.value)}
+          className={styles.annotationArea}
+        />
+        <Button
+          label="Add Text Annotation"
+          onClick={handleAddAnnotation}
+          className={styles.addAnnotation}
+          disabled={!currentAnnotationText.trim()}
+        />
+        <Button
+          label="Clear Annotations"
+          onClick={clearAnnotations}
+          className={styles.clearAnnotation}
+        />
+      </div>
       <div className={styles.highlightControls}>
         <Button
           label={`Highlight Mode: ${highlightMode}`}
@@ -127,25 +146,6 @@ export default function Actions() {
           label="Clear Highlights"
           onClick={() => console.log('CLEARING HIGHLIGHTS')}
           className={styles.btnClearHighlights}
-        />
-      </div>
-
-      <div className={styles.annotationControls}>
-        <textarea
-          placeholder="Add text annotation..."
-          value={currentAnnotationText}
-          onChange={(e) => setCurrentAnnotationText(e.target.value)}
-        />
-        <Button
-          label="Clear Annotations"
-          onClick={clearAnnotations}
-          className={styles.btnRed}
-        />
-        <Button
-          label="Add Text Annotation"
-          onClick={handleAddAnnotation}
-          className={styles.btnPurple}
-          disabled={!currentAnnotationText.trim()}
         />
       </div>
     </div>
