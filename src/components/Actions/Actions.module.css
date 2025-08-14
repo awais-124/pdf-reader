@@ -36,11 +36,13 @@
 .btnBlue {
   background-color: #1e5eff;
   color: white;
+  height: 40px;
 }
 
 .btnOrange {
   background-color: #cc8a00;
   color: white;
+  height: 40px;
 }
 
 .btnPurple {
@@ -72,11 +74,13 @@
   background-color: #dc3545;
   color: white;
   width: 200px;
+  height: 40px;
 
 }
 
 .highlightMode {
   width: 250px;
+  height: 40px;
 }
 
 /* Highlight color dots */
