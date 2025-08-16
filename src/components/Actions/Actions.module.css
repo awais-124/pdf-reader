@@ -85,13 +85,14 @@
 
 /* Highlight color dots */
 .colorDot {
-  width: 25px;
-  height: 25px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   display: inline-block;
   cursor: pointer;
   border: 2px solid transparent;
   margin-right: 5px;
+  transition: border 0.1s;
 }
 
 .highlightColorsHeading {
@@ -100,6 +101,7 @@
 
 .activeColor {
   border: 2px solid #000;
+  transition: border 0.1s;
 }
 
 /* Annotation area */

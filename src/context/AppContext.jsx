@@ -65,6 +65,7 @@ export const AppProvider = ({ children }) => {
   const [brushSize, setBrushSize] = useState(BRUSH_SIZES[0]);
 
   // --- TTS (placeholders) ---
+  const [ttsStartIndex, setTtsStartIndex] = useState(null);
   const [ttsActive, setTtsActive] = useState(false);
   const [ttsPaused, setTtsPaused] = useState(false);
   const [ttsTimer, setTtsTimer] = useState(0);
@@ -213,27 +214,26 @@ export const AppProvider = ({ children }) => {
     });
   }, []);
 
-  const startTTS = useCallback(
-    (text) => {
-      if (!text) return;
-      window.speechSynthesis.cancel();
-      const utter = new SpeechSynthesisUtterance(text);
-      utter.rate = ttsRate;
-      setTtsUtterance(utter);
-      setTtsActive(true);
-      setTtsPaused(false);
-      setTtsTimer(0);
+  const startTTS = useCallback(() => {
+    let startText = currentPageText;
+    if (ttsStartIndex !== null) {
+      startText = currentPageText.slice(ttsStartIndex);
+    }
+    if (!startText) return;
 
-      // start timer
-      if (timerRef.current) clearInterval(timerRef.current);
-      timerRef.current = setInterval(() => {
-        setTtsTimer((prev) => prev + 1);
-      }, 1000);
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(startText);
+    utter.rate = ttsRate;
+    setTtsUtterance(utter);
+    setTtsActive(true);
+    setTtsPaused(false);
+    setTtsTimer(0);
 
-      window.speechSynthesis.speak(utter);
-    },
-    [ttsRate]
-  );
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => setTtsTimer((prev) => prev + 1), 1000);
+
+    window.speechSynthesis.speak(utter);
+  }, [ttsRate, currentPageText, ttsStartIndex]);
 
   // Pause
   const pauseTTS = useCallback(() => {
@@ -298,6 +298,10 @@ export const AppProvider = ({ children }) => {
     return () => clearTimeout(timer);
   }, [annotations, currentDocumentId, dbReady, saveAnnotations]);
 
+  useEffect(() => {
+    setTtsStartIndex(null);
+  }, [currentPage]);
+
   const contextValue = useMemo(
     () => ({
       // PDF
@@ -311,6 +315,8 @@ export const AppProvider = ({ children }) => {
       nextPage,
       prevPage,
       currentPageText,
+      ttsStartIndex,
+      setTtsStartIndex,
 
       // Selected doc
       currentDocumentId,
