@@ -47,3 +47,10 @@ export const ANNOTATIONS_POSITION = {
   INITIAL_Y: 50,
   GAP: 30,
 };
+
+// Text extraction settings for highlighting
+export const TEXT_EXTRACTION_CONFIG = {
+  MIN_LINE_HEIGHT: 12,
+  MAX_LINE_HEIGHT: 100,
+  CURSOR_SIZE_MULTIPLIER: 1.2,
+};

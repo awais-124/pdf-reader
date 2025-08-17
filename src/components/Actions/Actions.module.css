@@ -72,17 +72,20 @@
   background-color: #dc3545;
   color: white;
   width: 200px;
+}
 
+.btnClearHighlights:hover {
+  background-color: #aa0011;
 }
 
 .highlightMode {
-  width: 250px;
+  width: 200px;
 }
 
 /* Highlight color dots */
 .colorDot {
-  width: 30px;
-  height: 30px;
+  width: 25px;
+  height: 25px;
   border-radius: 50%;
   display: inline-block;
   cursor: pointer;
@@ -98,6 +101,7 @@
 .activeColor {
   border: 2px solid #000;
   transition: border 0.1s;
+  transform: scale(1.2);
 }
 
 /* Annotation area */
@@ -116,4 +120,10 @@
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
+}
+
+.highlightActions {
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
 }

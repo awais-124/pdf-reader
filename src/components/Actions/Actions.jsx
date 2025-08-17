@@ -1,5 +1,6 @@
 /**
  * Actions.jsx
+ * Updated with highlight functionality integration
  * Toolbar for page navigation, TTS controls, highlight settings, and annotations.
  * Uses reusable Button component for consistent styling.
  */
@@ -19,7 +20,7 @@ import { formatTime, getHighlightColorName } from '../../utils/helper';
 import { useState } from 'react';
 
 export default function Actions() {
-  const [highlightMode, setHiglightMode] = useState(HIGHLIGHT_MODES.OFF);
+  const [highlightMode, setHighlightMode] = useState(HIGHLIGHT_MODES.OFF);
 
   const {
     currentHighlightColor,
@@ -40,6 +41,9 @@ export default function Actions() {
     setCurrentAnnotationText,
     addAnnotation,
     clearAnnotations,
+    clearHighlights,
+    clearAllHighlights,
+    pdfDoc,
   } = useContext(AppContext);
 
   const handlePlayStop = () => {
@@ -61,11 +65,32 @@ export default function Actions() {
     }
   };
 
-  // === Handlers (stubs for non-nav) ===
-  const toggleHighlightMode = () =>
-    setHiglightMode((prev) =>
-      prev === HIGHLIGHT_MODES.ON ? HIGHLIGHT_MODES.OFF : HIGHLIGHT_MODES.ON
-    );
+  // === Highlight Handlers ===
+  const toggleHighlightMode = () => {
+    const newMode =
+      highlightMode === HIGHLIGHT_MODES.ON
+        ? HIGHLIGHT_MODES.OFF
+        : HIGHLIGHT_MODES.ON;
+
+    setHighlightMode(newMode);
+
+    // Update global highlight mode state (if using window object method)
+    if (window.toggleHighlightMode) {
+      window.toggleHighlightMode();
+    }
+  };
+
+  const handleClearCurrentPageHighlights = () => {
+    if (window.confirm('Clear all highlights on this page?')) {
+      clearHighlights();
+    }
+  };
+
+  const handleClearAllHighlights = () => {
+    if (window.confirm('Clear ALL highlights in the document?')) {
+      clearAllHighlights();
+    }
+  };
 
   const handleAddAnnotation = () => {
     if (currentAnnotationText.trim()) {
@@ -122,13 +147,20 @@ export default function Actions() {
           className={styles.clearAnnotation}
         />
       </div>
+
       <div className={styles.highlightControls}>
         <Button
           label={`Highlight Mode: ${highlightMode}`}
           onClick={toggleHighlightMode}
-          className={styles.highlightMode}
+          className={`${styles.highlightMode} ${
+            highlightMode === HIGHLIGHT_MODES.ON
+              ? styles.highlightModeActive
+              : ''
+          }`}
           highlightMode={highlightMode}
+          disabled={!pdfDoc}
         />
+
         <div className={styles.highlightColors}>
           {Object.values(HIGHLIGHT_COLORS).map((color) => (
             <span
@@ -142,11 +174,21 @@ export default function Actions() {
             />
           ))}
         </div>
-        <Button
-          label="Clear Highlights"
-          onClick={() => console.log('CLEARING HIGHLIGHTS')}
-          className={styles.btnClearHighlights}
-        />
+
+        <div className={styles.highlightActions}>
+          <Button
+            label="Clear Page Highlights"
+            onClick={handleClearCurrentPageHighlights}
+            className={styles.btnClearHighlights}
+            title="Clear highlights on current page only"
+          />
+          <Button
+            label="Clear All Highlights"
+            onClick={handleClearAllHighlights}
+            className={styles.btnClearHighlights}
+            title="Clear all highlights in the document"
+          />
+        </div>
       </div>
     </div>
   );

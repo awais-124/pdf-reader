@@ -1,10 +1,6 @@
 /**
- * AppContext.jsx
- * --------------------------------
- * UI/application state + PDF viewing logic.
- * - Holds PDF.js document instance, page, total pages, scale.
- * - Provides navigation: prev/next/goTo, and loader from Blob.
- * - Keeps TTS/highlights/annotations placeholders as before.
+ * AppContext.jsx - Updated with highlight management
+ * Added highlight loading, saving, and removal functionality
  */
 
 import {
@@ -39,7 +35,8 @@ import {
 export const AppContext = createContext();
 
 export const AppProvider = ({ children }) => {
-  const { saveAnnotations, dbReady, getDocumentById } = useContext(DbContext);
+  const { saveAnnotations, saveHighlights, dbReady, getDocumentById } =
+    useContext(DbContext);
 
   const timerRef = useRef(null);
 
@@ -54,7 +51,7 @@ export const AppProvider = ({ children }) => {
   const [currentDocumentId, setCurrentDocumentId] = useState(null);
   const [currentDocumentName, setCurrentDocumentName] = useState(null);
 
-  // --- Highlights / Annotations (placeholders) ---
+  // --- Highlights / Annotations ---
   const [highlights, setHighlights] = useState([]);
   const [currentHighlightColor, setCurrentHighlightColor] = useState(
     HIGHLIGHT_COLORS.yellow
@@ -88,6 +85,7 @@ export const AppProvider = ({ children }) => {
         setCurrentDocumentId(null);
         setCurrentDocumentName(null);
         setAnnotations([]); // Clear annotations
+        setHighlights([]); // Clear highlights
         return;
       }
 
@@ -99,18 +97,22 @@ export const AppProvider = ({ children }) => {
       setTotalPages(doc.numPages);
       setCurrentPage(1);
       setAnnotations([]); // Clear existing annotations first
+      setHighlights([]); // Clear existing highlights first
 
       if (name) setCurrentDocumentName(name);
       if (docId) {
         setCurrentDocumentId(docId);
-        // Load saved annotations for this document
+        // Load saved annotations and highlights for this document
         try {
           const documentData = await getDocumentById(docId);
           if (documentData?.annotations) {
             setAnnotations(documentData.annotations);
           }
+          if (documentData?.highlights) {
+            setHighlights(documentData.highlights);
+          }
         } catch (error) {
-          console.error('Error loading annotations:', error);
+          console.error('Error loading document data:', error);
         }
       }
 
@@ -118,7 +120,7 @@ export const AppProvider = ({ children }) => {
       const firstPageText = await extractTextFromPage(doc, 1);
       setCurrentPageText(firstPageText);
     },
-    [extractTextFromPage]
+    [extractTextFromPage, getDocumentById]
   );
 
   const goToPage = useCallback(
@@ -140,18 +142,25 @@ export const AppProvider = ({ children }) => {
     setCurrentPage((p) => Math.max(p - 1, 1));
   }, [pdfDoc]);
 
-  // --- Highlight Functions (stubs kept) ---
-  const addHighlight = useCallback(
-    (h) => setHighlights((prev) => [...prev, h]),
-    []
-  );
-  const removeHighlight = useCallback(
-    (id) => setHighlights((prev) => prev.filter((x) => x.id !== id)),
-    []
-  );
-  const clearHighlights = useCallback(() => setHighlights([]), []);
+  // --- Highlight Functions ---
+  const addHighlight = useCallback((h) => {
+    setHighlights((prev) => [...prev, h]);
+  }, []);
 
-  // --- Annotation Functions (stubs kept) ---
+  const removeHighlight = useCallback((id) => {
+    setHighlights((prev) => prev.filter((x) => x.id !== id));
+  }, []);
+
+  const clearHighlights = useCallback(() => {
+    // Only clear highlights for current page
+    setHighlights((prev) => prev.filter((h) => h.page !== currentPage));
+  }, [currentPage]);
+
+  const clearAllHighlights = useCallback(() => {
+    setHighlights([]);
+  }, []);
+
+  // --- Annotation Functions (unchanged) ---
   const addAnnotation = useCallback(
     (
       text,
@@ -214,6 +223,7 @@ export const AppProvider = ({ children }) => {
     });
   }, []);
 
+  // --- TTS Functions (unchanged) ---
   const startTTS = useCallback(() => {
     let startText = currentPageText;
     if (ttsStartIndex !== null) {
@@ -235,27 +245,24 @@ export const AppProvider = ({ children }) => {
     window.speechSynthesis.speak(utter);
   }, [ttsRate, currentPageText, ttsStartIndex]);
 
-  // Pause
   const pauseTTS = useCallback(() => {
     if (window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
       window.speechSynthesis.pause();
       setTtsPaused(true);
-      if (timerRef.current) clearInterval(timerRef.current); // pause timer
+      if (timerRef.current) clearInterval(timerRef.current);
     }
   }, []);
 
-  // Resume
   const resumeTTS = useCallback(() => {
     if (window.speechSynthesis.paused) {
       window.speechSynthesis.resume();
       setTtsPaused(false);
       timerRef.current = setInterval(() => {
         setTtsTimer((prev) => prev + 1);
-      }, 1000); // resume timer
+      }, 1000);
     }
   }, []);
 
-  // Stop completely
   const stopTTS = useCallback(() => {
     window.speechSynthesis.cancel();
     setTtsActive(false);
@@ -279,6 +286,7 @@ export const AppProvider = ({ children }) => {
     })();
   }, [pdfDoc, currentPage, extractTextFromPage]);
 
+  // Save annotations to database
   useEffect(() => {
     const saveAnnotationsToDb = async () => {
       if (currentDocumentId && dbReady && annotations.length > 0) {
@@ -292,11 +300,27 @@ export const AppProvider = ({ children }) => {
       }
     };
 
-    // Add a small debounce to prevent rapid saves
     const timer = setTimeout(saveAnnotationsToDb, 500);
-
     return () => clearTimeout(timer);
   }, [annotations, currentDocumentId, dbReady, saveAnnotations]);
+
+  // Save highlights to database
+  useEffect(() => {
+    const saveHighlightsToDb = async () => {
+      if (currentDocumentId && dbReady && highlights.length >= 0) {
+        try {
+          console.log('Saving highlights:', highlights);
+          await saveHighlights(currentDocumentId, highlights);
+          console.log('Highlights saved successfully');
+        } catch (error) {
+          console.error('Failed to save highlights:', error);
+        }
+      }
+    };
+
+    const timer = setTimeout(saveHighlightsToDb, 500);
+    return () => clearTimeout(timer);
+  }, [highlights, currentDocumentId, dbReady, saveHighlights]);
 
   useEffect(() => {
     setTtsStartIndex(null);
@@ -329,6 +353,7 @@ export const AppProvider = ({ children }) => {
       addHighlight,
       removeHighlight,
       clearHighlights,
+      clearAllHighlights,
       currentHighlightColor,
       setCurrentHighlightColor,
       brushSize,
@@ -380,6 +405,7 @@ export const AppProvider = ({ children }) => {
       addHighlight,
       removeHighlight,
       clearHighlights,
+      clearAllHighlights,
       currentHighlightColor,
       setCurrentHighlightColor,
       brushSize,
