@@ -150,3 +150,9 @@
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
 }
+
+[data-debug="textlayer"] {
+  outline: 2px solid lime !important;
+  background-color: rgba(0, 255, 0, 0);
+  /* faint green overlay */
+}

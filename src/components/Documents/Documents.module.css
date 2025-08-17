@@ -7,16 +7,14 @@
 .uploadRow {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  /* Push remove button to right */
+  justify-content: space-between; /* Push remove button to right */
   gap: 12px;
   width: 100%;
 }
 
 /* Style for native file input */
 .fileInput {
-  flex: 1;
-  /* take remaining space */
+  flex: 1; /* take remaining space */
   padding: 6px;
   border: 1px solid #ccc;
   border-radius: 4px;
@@ -33,7 +31,6 @@
 .btnDanger {
   background-color: #dc3545;
   color: white;
-  height: 35px !important;
 }
 
 /* Document list styles */

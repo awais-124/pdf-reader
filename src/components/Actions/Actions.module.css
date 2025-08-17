@@ -36,13 +36,11 @@
 .btnBlue {
   background-color: #1e5eff;
   color: white;
-  height: 40px;
 }
 
 .btnOrange {
   background-color: #cc8a00;
   color: white;
-  height: 40px;
 }
 
 .btnPurple {
@@ -74,13 +72,14 @@
   background-color: #dc3545;
   color: white;
   width: 200px;
-  height: 40px;
+}
 
+.btnClearHighlights:hover {
+  background-color: #aa0011;
 }
 
 .highlightMode {
-  width: 250px;
-  height: 40px;
+  width: 200px;
 }
 
 /* Highlight color dots */
@@ -92,6 +91,7 @@
   cursor: pointer;
   border: 2px solid transparent;
   margin-right: 5px;
+  transition: border 0.1s;
 }
 
 .highlightColorsHeading {
@@ -100,6 +100,8 @@
 
 .activeColor {
   border: 2px solid #000;
+  transition: border 0.1s;
+  transform: scale(1.2);
 }
 
 /* Annotation area */
@@ -118,4 +120,10 @@
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
+}
+
+.highlightActions {
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
 }

@@ -1,0 +1,24 @@
+/* HighlightLayer.module.css */
+
+.highlightCanvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    z-index: 10;
+    mix-blend-mode: multiply;
+    opacity: 0.6;
+}
+
+/* When highlight mode is active */
+.highlightCanvas[data-active="true"] {
+    pointer-events: auto;
+}
+
+/* Prevent text selection during highlighting */
+.highlightCanvas:active {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
