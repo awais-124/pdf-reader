@@ -1,6 +1,7 @@
 /**
- * AppContext.jsx - Updated with highlight management
+ * AppContext.jsx - Updated with highlight management and cursor size options
  * Added highlight loading, saving, and removal functionality
+ * Added fixed cursor sizing with 1x, 2x, 3x options
  */
 
 import {
@@ -30,6 +31,7 @@ import {
   TTS_DEFAULT_RATE,
   DEFAULT_PDF_SCALE,
   ANNOTATIONS_POSITION,
+  HIGHLIGHT_CURSOR_SIZES, // New constant for cursor sizes
 } from '../constants/appConstants.js';
 
 export const AppContext = createContext();
@@ -56,6 +58,7 @@ export const AppProvider = ({ children }) => {
   const [currentHighlightColor, setCurrentHighlightColor] = useState(
     HIGHLIGHT_COLORS.yellow
   );
+  const [highlightCursorSize, setHighlightCursorSize] = useState(1); // New: cursor size multiplier (1x, 2x, 3x)
   const [annotations, setAnnotations] = useState([]);
   const [currentAnnotationText, setCurrentAnnotationText] = useState('');
 
@@ -356,6 +359,8 @@ export const AppProvider = ({ children }) => {
       clearAllHighlights,
       currentHighlightColor,
       setCurrentHighlightColor,
+      highlightCursorSize, // New: cursor size
+      setHighlightCursorSize, // New: cursor size setter
       brushSize,
       setBrushSize,
 
@@ -382,6 +387,7 @@ export const AppProvider = ({ children }) => {
 
       // Constants
       HIGHLIGHT_COLORS,
+      HIGHLIGHT_CURSOR_SIZES, // New: cursor size options
       BRUSH_SIZES,
       TIMER_INTERVAL_MS,
       DB_CONFIG,
@@ -408,6 +414,8 @@ export const AppProvider = ({ children }) => {
       clearAllHighlights,
       currentHighlightColor,
       setCurrentHighlightColor,
+      highlightCursorSize,
+      setHighlightCursorSize,
       brushSize,
       setBrushSize,
       annotations,

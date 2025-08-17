@@ -54,3 +54,9 @@ export const TEXT_EXTRACTION_CONFIG = {
   MAX_LINE_HEIGHT: 100,
   CURSOR_SIZE_MULTIPLIER: 1.2,
 };
+
+export const HIGHLIGHT_CURSOR_SIZES = [
+  { value: 1, label: '1x' },
+  { value: 2, label: '2x' },
+  { value: 3, label: '3x' },
+];
