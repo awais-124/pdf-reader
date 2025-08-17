@@ -111,7 +111,7 @@ const HighlightLayer = React.memo(({ highlightMode, pdfCanvasRef }) => {
 
     return `url('data:image/svg+xml;utf8,${encodeURIComponent(
       svg
-    )}') ${radius} ${radius - 4}, auto`;
+    )}') ${radius} ${radius - 2}, auto`;
   }, []);
 
   // Memoized cursor based on highlight mode and current settings
